@@ -1,0 +1,35 @@
+[project]
+name = "media-downloader-companion"
+version = "0.5.3"
+description = "Windows companion app and Chrome MV3 extension for user-accessible media downloads"
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+authors = [{ name = "Relatoxin" }]
+dependencies = [
+  "yt-dlp[default,curl-cffi]==2026.8.19",
+  "imageio-ffmpeg==0.6.0",
+  "Pillow==12.3.0",
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+exclude = [".venv", "node_modules", ".superpowers", "docs/superpowers"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = ["E501", "UP042"]
+
+[tool.mypy]
+python_version = "3.12"
+files = ["app.py", "media_downloader"]
+check_untyped_defs = true
+disallow_untyped_defs = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_unreachable = true
+ignore_missing_imports = true
+exclude = ['^\.venv/', '^\.superpowers/']
+

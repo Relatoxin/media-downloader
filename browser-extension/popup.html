@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Media Detector</title>
+    <link rel="stylesheet" href="popup.css">
+  </head>
+  <body>
+    <header>
+      <div>
+        <h1>Медиапотоки</h1>
+        <p id="connection">Проверка локального приложения…</p>
+      </div>
+      <div class="header-actions">
+        <button id="diagnostics" class="secondary" type="button" title="Скопировать безопасный диагностический отчёт">Диагностика</button>
+        <button id="clear" class="secondary" type="button">Очистить</button>
+      </div>
+    </header>
+    <div id="message" role="status"></div>
+    <button id="add-page" class="secondary page-action" type="button">Добавить текущую страницу</button>
+    <main id="results"></main>
+    <template id="candidate">
+      <article>
+        <div class="preview-wrap">
+          <img class="preview" alt="Кадр из воспроизводимого видео">
+          <span class="duration">Длительность неизвестна</span>
+        </div>
+        <div class="row">
+          <span class="kind"></span>
+          <button class="remove icon" type="button" title="Убрать из списка">×</button>
+        </div>
+        <div class="media-info"></div>
+        <button class="download" type="button">Добавить в приложение</button>
+      </article>
+    </template>
+    <footer>
+      Добавление не начинает загрузку. Запуск выполняется отдельно в локальном приложении. DRM не поддерживается.
+    </footer>
+    <script src="platforms.js"></script>
+    <script src="media-utils.js"></script>
+    <script src="popup.js"></script>
+  </body>
+</html>
+

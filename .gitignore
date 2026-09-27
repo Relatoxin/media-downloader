@@ -1,0 +1,44 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.pyd
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+build/
+dist/
+*.egg-info/
+
+# JavaScript
+node_modules/
+coverage/
+
+# Runtime and test artifacts
+.tmp/
+download/
+downloads/
+.test-hls/
+.chrome-test-profile/
+*.part
+*.part-Frag*
+*.ytdl
+
+# Local application state and diagnostics
+settings.json
+*.log
+*.har
+
+# Editors and operating systems
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Agent execution scratch space (never published)
+.superpowers/
+
