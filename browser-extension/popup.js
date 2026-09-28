@@ -130,13 +130,13 @@ async function checkService() {
   }
   connection.textContent = serviceReady
     ? "Локальное приложение подключено"
-    : "Сначала запустите run.bat";
+    : "Сначала запустите MediaDownloader.exe";
   connection.className = serviceReady ? "ok" : "bad";
 }
 
 async function prepare(payload, button) {
   if (!serviceReady) {
-    message.textContent = "Локальное приложение не запущено. Запустите run.bat и откройте расширение снова.";
+    message.textContent = "Локальное приложение не запущено. Запустите MediaDownloader.exe и откройте расширение снова.";
     return;
   }
   button.disabled = true;

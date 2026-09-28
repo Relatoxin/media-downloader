@@ -1,12 +1,47 @@
 from __future__ import annotations
 
 import unittest
+from pathlib import Path
 
-from app import MediaDownloaderApp, can_remove_job, can_scroll_region, restore_window, wheel_units
+from app import (
+    MediaDownloaderApp,
+    can_remove_job,
+    can_scroll_region,
+    main,
+    restore_window,
+    set_window_icon,
+    wheel_units,
+)
 from media_downloader.jobs import JobState
 
 
 class AppHelpersTest(unittest.TestCase):
+    def test_window_icon_is_loaded_from_the_packaged_asset(self) -> None:
+        calls: list[str] = []
+
+        class Window:
+            def iconbitmap(self, *, default: str) -> None:
+                calls.append(default)
+
+        set_window_icon(Window(), Path("assets/app-icon.ico"))
+
+        self.assertEqual(calls, [str(Path("assets/app-icon.ico"))])
+
+    def test_main_prepares_multiprocessing_before_starting_the_ui(self) -> None:
+        calls: list[str] = []
+
+        class Window:
+            def mainloop(self) -> None:
+                calls.append("mainloop")
+
+        def app_factory() -> Window:
+            calls.append("create")
+            return Window()
+
+        main(app_factory=app_factory, freeze_support=lambda: calls.append("freeze"))
+
+        self.assertEqual(calls, ["freeze", "create", "mainloop"])
+
     def test_all_inactive_jobs_can_be_removed(self) -> None:
         self.assertTrue(can_remove_job(JobState.READY))
         self.assertTrue(can_remove_job(JobState.COMPLETED))

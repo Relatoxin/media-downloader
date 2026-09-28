@@ -21,15 +21,13 @@ A local Windows companion and Chrome MV3 extension for preparing and downloading
 ## Requirements
 
 - Windows 10 or 11
-- Python 3.12+
 - Chrome 102+
-- Node.js 20+ for development only
 
 FFmpeg is supplied by `imageio-ffmpeg`.
 
 ## Quick start
 
-1. Run `run.bat`. It creates `.venv`, installs runtime dependencies, and opens the app.
+1. Run `MediaDownloader.exe` from the project root. Keep the adjacent `_internal` folder in place. Python is not required.
 2. Open `chrome://extensions` and enable Developer mode.
 3. Choose **Load unpacked** and select `browser-extension`.
 4. Start a video, open the extension, and choose **Добавить в приложение**.
@@ -43,13 +41,19 @@ The companion listens only on `127.0.0.1:17843`. It persists only the selected o
 
 ## Development
 
+Building from source requires Python 3.12+; Node.js 24+ is used for extension checks.
+
 ```powershell
 py -3.12 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
 npm ci
 .\.venv\Scripts\python.exe -m unittest discover -s tests -p "test_*.py"
 npm test
+./build.ps1
 ```
+
+The folder build is written to `dist/MediaDownloader` and copied to the project root as `MediaDownloader.exe` plus `_internal`. `run.bat` remains available as a source-development launcher.
+Successful GitHub Actions runs also provide the same folder as a downloadable `MediaDownloader-windows-*` artifact.
 
 See [testing](docs/testing.md) for every quality gate, [architecture](docs/architecture.md) for the system design, and the [case study](docs/case-study.md) for the portfolio narrative.
 

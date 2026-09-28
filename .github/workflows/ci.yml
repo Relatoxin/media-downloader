@@ -45,3 +45,12 @@ jobs:
         run: |
           python -m pip check
           pip-audit -r requirements.txt
+      - name: Build Windows folder
+        run: ./build.ps1
+      - name: Upload Windows folder
+        uses: actions/upload-artifact@v7
+        with:
+          name: MediaDownloader-windows-${{ github.sha }}
+          path: dist/MediaDownloader
+          if-no-files-found: error
+          retention-days: 14

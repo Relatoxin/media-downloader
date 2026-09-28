@@ -11,6 +11,8 @@ __pycache__/
 htmlcov/
 build/
 dist/
+/MediaDownloader.exe
+/_internal/
 *.egg-info/
 
 # JavaScript

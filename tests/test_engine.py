@@ -46,6 +46,15 @@ class EngineHelpersTest(unittest.TestCase):
         self.assertEqual(options["impersonate"].client, "chrome")
         self.assertIn("node", options["js_runtimes"])
 
+    def test_loopback_media_does_not_enable_browser_impersonation(self) -> None:
+        request = DownloadRequest("http://127.0.0.1:8080/video.m3u8", Path.cwd())
+        engine = DownloadEngine(lambda _data: None, lambda _text: None)
+
+        options = engine._options(request)
+
+        self.assertNotIn("impersonate", options)
+        self.assertEqual(options["proxy"], "")
+
     def test_explicit_selector_and_audio_modes_override_legacy_quality(self) -> None:
         engine = DownloadEngine(lambda _data: None, lambda _text: None)
         source_request = DownloadRequest(

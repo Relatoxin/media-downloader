@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import base64
+import multiprocessing
 import queue
+import sys
 import threading
 import tkinter as tk
 import urllib.request
+from collections.abc import Callable
 from functools import partial
 from io import BytesIO
 from pathlib import Path
@@ -25,6 +28,18 @@ from media_downloader.thumbnails import safe_thumbnail_headers
 
 APP_BG, CARD_BG, TEXT, MUTED, ACCENT = "#0f172a", "#172033", "#e5e7eb", "#94a3b8", "#38bdf8"
 APP_VERSION = "0.5.3"
+
+
+def resource_path(relative_path: str) -> Path:
+    base_path = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
+    return base_path / relative_path
+
+
+def set_window_icon(window: Any, icon_path: Path) -> None:
+    try:
+        window.iconbitmap(default=str(icon_path))
+    except (OSError, tk.TclError):
+        pass
 
 
 def can_remove_job(state: JobState) -> bool:
@@ -55,6 +70,7 @@ class MediaDownloaderApp(tk.Tk):
     def __init__(self) -> None:
         super().__init__()
         self.title(f"Media Downloader {APP_VERSION}")
+        set_window_icon(self, resource_path("assets/app-icon.ico"))
         self.geometry("940x760")
         self.minsize(760, 620)
         self.configure(bg=APP_BG)
@@ -513,5 +529,14 @@ class MediaDownloaderApp(tk.Tk):
         self.destroy()
 
 
+def main(
+    *,
+    app_factory: Callable[[], Any] = MediaDownloaderApp,
+    freeze_support: Callable[[], None] = multiprocessing.freeze_support,
+) -> None:
+    freeze_support()
+    app_factory().mainloop()
+
+
 if __name__ == "__main__":
-    MediaDownloaderApp().mainloop()
+    main()

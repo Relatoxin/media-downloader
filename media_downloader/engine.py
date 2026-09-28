@@ -162,12 +162,15 @@ class DownloadEngine:
             "logger": _Logger(self.log_callback),
             "ffmpeg_location": imageio_ffmpeg.get_ffmpeg_exe(),
             "merge_output_format": "mp4",
-            "impersonate": ImpersonateTarget(client="chrome"),
             "js_runtimes": {"node": {}, "deno": {}},
             "quiet": True,
             "no_warnings": False,
             "simulate": simulate,
         }
+        if urlparse(request.url).hostname in {"127.0.0.1", "localhost", "::1"}:
+            options["proxy"] = ""
+        else:
+            options["impersonate"] = ImpersonateTarget(client="chrome")
         if request.browser:
             options["cookiesfrombrowser"] = (request.browser,)
         if request.headers:

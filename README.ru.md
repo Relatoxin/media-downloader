@@ -21,15 +21,13 @@
 ## Требования
 
 - Windows 10/11;
-- Python 3.12 или новее;
 - Chrome 102 или новее;
-- Node.js 20 или новее нужен только для разработки.
 
 FFmpeg предоставляется пакетом `imageio-ffmpeg`.
 
 ## Быстрый запуск
 
-1. Запустите `run.bat`. Скрипт создаст `.venv`, установит зависимости и откроет приложение.
+1. Запустите `MediaDownloader.exe` из корневой папки проекта. Не перемещайте соседнюю папку `_internal`. Устанавливать Python не требуется.
 2. Откройте `chrome://extensions` и включите режим разработчика.
 3. Нажмите «Загрузить распакованное расширение» и выберите папку `browser-extension`.
 4. Запустите видео, откройте расширение и нажмите «Добавить в приложение».
@@ -43,13 +41,19 @@ FFmpeg предоставляется пакетом `imageio-ffmpeg`.
 
 ## Разработка
 
+Для сборки из исходников требуется Python 3.12 или новее; Node.js 24 или новее используется для проверок расширения.
+
 ```powershell
 py -3.12 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
 npm ci
 .\.venv\Scripts\python.exe -m unittest discover -s tests -p "test_*.py"
 npm test
+./build.ps1
 ```
+
+Папочная сборка создаётся в `dist/MediaDownloader`, затем `MediaDownloader.exe` и `_internal` копируются в корень проекта. `run.bat` остаётся вспомогательным запуском из исходного кода для разработчиков.
+Успешные запуски GitHub Actions также публикуют эту папку как скачиваемый артефакт `MediaDownloader-windows-*`.
 
 Все проверки описаны в [docs/testing.md](docs/testing.md), устройство проекта — в [docs/architecture.md](docs/architecture.md). История задачи и результат для портфолио находятся в [docs/case-study.md](docs/case-study.md).
 
