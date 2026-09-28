@@ -360,4 +360,3 @@ test("popup has no technical URL element or full-tab image fallback", () => {
   assert.match(js, /navigator\.clipboard\.writeText/);
   assert.ok(manifest.permissions.includes("clipboardWrite"));
 });
-

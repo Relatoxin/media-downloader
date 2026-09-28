@@ -340,4 +340,3 @@ class CompanionServer:
         self._server.server_close()
         self._server = None
         self._thread = None
-

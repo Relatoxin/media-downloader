@@ -32,4 +32,3 @@ warn_unused_ignores = true
 warn_unreachable = true
 ignore_missing_imports = true
 exclude = ['^\.venv/', '^\.superpowers/']
-

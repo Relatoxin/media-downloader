@@ -63,4 +63,3 @@ npm test
 ## Лицензия
 
 [MIT](LICENSE) © 2026 Relatoxin.
-

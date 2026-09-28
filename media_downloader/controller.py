@@ -144,4 +144,3 @@ class DownloadController:
             return parsed if parsed > 0 else None
         except (TypeError, ValueError):
             return None
-

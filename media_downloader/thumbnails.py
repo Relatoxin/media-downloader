@@ -12,4 +12,3 @@ def safe_thumbnail_headers(headers: dict[str, str]) -> dict[str, str]:
 
 def preferred_thumbnail(extension_preview: str, analyzed_thumbnail: str) -> str:
     return extension_preview or analyzed_thumbnail
-

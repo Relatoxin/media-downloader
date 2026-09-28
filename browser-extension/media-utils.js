@@ -184,4 +184,3 @@
 
   return {canonicalUrl, chooseActiveCandidate, buildPreparePayload, buildPagePayload, buildDiagnostics, collapseRelatedCandidates, selectDisplayItems, visibleCount};
 });
-

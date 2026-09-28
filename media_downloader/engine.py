@@ -463,4 +463,3 @@ def _download_worker(request: DownloadRequest, messages: Any) -> None:
         messages.put(("error", ("download", str(exc))))
     except Exception as exc:
         messages.put(("error", ("runtime", str(exc))))
-

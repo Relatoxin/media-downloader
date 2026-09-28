@@ -75,4 +75,3 @@ class JobStore:
         if self.active_job_id != job_id:
             raise ValueError("Задача не является активной")
         return self.get(job_id)
-

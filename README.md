@@ -63,4 +63,3 @@ See [testing](docs/testing.md) for every quality gate, [architecture](docs/archi
 ## License
 
 [MIT](LICENSE) © 2026 Relatoxin.
-

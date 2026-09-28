@@ -13,4 +13,3 @@ Only the latest commit on the default branch is supported during the pre-release
 ## Scope
 
 Relevant reports include unintended non-loopback exposure, cross-origin access to the companion API, unsafe filename or path handling, leakage of request headers/cookies, and command execution through crafted media metadata. DRM bypass requests and failures caused only by unsupported third-party sites are out of scope.
-

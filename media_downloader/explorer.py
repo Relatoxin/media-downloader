@@ -86,4 +86,3 @@ def open_folder(path: Path, *, launcher: Launcher = subprocess.Popen) -> Explore
         return ExplorerResult(ExplorerStatus.FOLDER_OPENED, resolved, resolved)
     except OSError as exc:
         return ExplorerResult(ExplorerStatus.FAILED, resolved, resolved, str(exc))
-

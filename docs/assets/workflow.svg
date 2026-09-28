@@ -23,4 +23,3 @@
   <g fill="#64748b"><path d="M450 245l-16-10v20z"/><path d="M860 245l-16-10v20z"/></g>
   <text x="350" y="226" fill="#94a3b8" font-family="Segoe UI, sans-serif" font-size="14">loopback API</text><text x="758" y="226" fill="#94a3b8" font-family="Segoe UI, sans-serif" font-size="14">isolated worker</text>
 </svg>
-

@@ -263,4 +263,3 @@ document.querySelector("#diagnostics").addEventListener("click", async () => {
 });
 
 void Promise.all([checkService(), refresh()]);
-

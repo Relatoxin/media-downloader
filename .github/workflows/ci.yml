@@ -45,4 +45,3 @@ jobs:
         run: |
           python -m pip check
           pip-audit -r requirements.txt
-

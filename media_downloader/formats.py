@@ -106,4 +106,3 @@ def build_format_options(info: dict[str, Any]) -> tuple[FormatOption, ...]:
             )
         )
     return tuple(options)
-

@@ -20,4 +20,3 @@ Before opening a pull request, run every command in [docs/testing.md](docs/testi
 - Describe observable behavior and verification steps in the pull request.
 
 By contributing, you agree that your contribution is licensed under the MIT License.
-

@@ -19,4 +19,3 @@ The Python suite covers state transitions, format selection, local HTTP validati
 CI uses Windows, Python 3.12, and Node.js 20. It does not contact live media or social platforms. Live checks are documented separately in [social-platform-matrix.md](social-platform-matrix.md) and must use content/accounts the tester is authorized to access.
 
 TypeScript checks the two shared pure-logic JavaScript modules with `checkJs`; DOM-heavy popup/service-worker code is linted and exercised by Node regression tests. This focused scope keeps the current JavaScript implementation honest without pretending it is fully migrated to TypeScript.
-

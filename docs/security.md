@@ -25,4 +25,3 @@ Use the project only for content you may lawfully download. The project delibera
 ## Publishing diagnostics
 
 Before sharing a diagnostic report, review its page and media paths. The extension removes query strings, but path components can still identify private content. Never publish cookies, authorization headers, signed URLs, browser profiles, or downloaded samples.
-

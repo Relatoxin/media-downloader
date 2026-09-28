@@ -86,4 +86,3 @@ def extract_video_frame(
         return raw
     except (OSError, ValueError, subprocess.SubprocessError):
         return None
-

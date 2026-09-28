@@ -515,4 +515,3 @@ class MediaDownloaderApp(tk.Tk):
 
 if __name__ == "__main__":
     MediaDownloaderApp().mainloop()
-

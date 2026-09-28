@@ -106,4 +106,3 @@ class PreparedJob:
         if self.state != JobState.DOWNLOADING:
             raise ValueError("Отменить можно только активную загрузку")
         self.state = JobState.CANCELLED
-

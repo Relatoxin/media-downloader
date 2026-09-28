@@ -38,4 +38,3 @@ class SettingsStore:
         payload = {"outputDir": str(settings.output_dir.expanduser().resolve())}
         temporary.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
         temporary.replace(self.path)
-

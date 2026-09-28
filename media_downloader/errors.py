@@ -21,4 +21,3 @@ def friendly_error(exc: Exception) -> str:
     if "unsupported url" in lowered:
         return "Эта страница пока не поддерживается yt-dlp.\n\n" + text
     return text
-

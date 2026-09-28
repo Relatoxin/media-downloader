@@ -39,4 +39,3 @@ Captured active variants can enter `READY` with one confirmed format. Page URLs 
 ## Trust boundaries
 
 The extension and all site data are untrusted input. The companion accepts requests only on loopback, requires `X-Media-Helper: 1`, limits request size, validates URLs, filters headers, and allows CORS only for Chrome extension origins. Download paths are resolved under the selected output directory.
-

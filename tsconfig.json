@@ -13,4 +13,3 @@
   },
   "include": ["browser-extension/media-utils.js", "browser-extension/platforms.js"]
 }
-

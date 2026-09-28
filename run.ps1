@@ -24,4 +24,3 @@ if ($InstalledHash.Trim() -ne $RequirementsHash) {
 }
 
 & $VenvPython (Join-Path $ProjectDir "app.py")
-

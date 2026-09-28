@@ -14,4 +14,3 @@ Use only a video you own or a synthetic/local HLS fixture.
 8. End on the architecture diagram and test results.
 
 Before publishing, blur account names, browser profiles, local paths, private URLs, cookies, tokens, and unrelated tabs. Do not demonstrate DRM-protected or copyrighted third-party content without permission.
-

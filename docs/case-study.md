@@ -36,4 +36,3 @@ The prototype now has a clear extension-to-app workflow, explicit quality/audio 
 - Migrate popup/background scripts incrementally to TypeScript.
 - Add opt-in, redacted troubleshooting logs.
 - Publish a Chrome Web Store build after permission and privacy review.
-
