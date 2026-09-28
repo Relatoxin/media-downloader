@@ -1,6 +1,6 @@
 $ErrorActionPreference = "Stop"
 $ProjectDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$Python = Join-Path $ProjectDir ".venv\Scripts\python.exe"
+$VirtualEnvPython = Join-Path $ProjectDir ".venv\Scripts\python.exe"
 $Spec = Join-Path $ProjectDir "MediaDownloader.spec"
 $BundleDir = Join-Path $ProjectDir "dist\MediaDownloader"
 $Executable = Join-Path $BundleDir "MediaDownloader.exe"
@@ -8,8 +8,16 @@ $RuntimeDir = Join-Path $BundleDir "_internal"
 $RootExecutable = Join-Path $ProjectDir "MediaDownloader.exe"
 $RootRuntimeDir = Join-Path $ProjectDir "_internal"
 
-if (-not (Test-Path -LiteralPath $Python)) {
-    throw "Python environment not found. Create .venv and install requirements-dev.txt first."
+if (Test-Path -LiteralPath $VirtualEnvPython) {
+    $Python = $VirtualEnvPython
+}
+else {
+    $PythonCommand = Get-Command python -CommandType Application -ErrorAction SilentlyContinue |
+        Select-Object -First 1
+    if ($null -eq $PythonCommand) {
+        throw "Python not found. Create .venv or add Python to PATH, then install requirements-dev.txt."
+    }
+    $Python = $PythonCommand.Path
 }
 
 Push-Location $ProjectDir
