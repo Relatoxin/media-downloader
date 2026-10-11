@@ -8,6 +8,7 @@ from uuid import uuid4
 
 from .engine import DownloadCancelled, DownloadRequest, FormatUnavailableError
 from .formats import MediaAnalysis
+from .i18n import translate
 from .job_store import JobStore
 from .jobs import FormatOption, PreparedJob, SourceType
 from .thumbnails import preferred_thumbnail
@@ -24,12 +25,14 @@ class DownloadController:
         engine_factory: Callable[[], EngineLike],
         output_dir_provider: Callable[[], Path],
         browser_provider: Callable[[], str | None] | None = None,
+        language_provider: Callable[[], str] | None = None,
         on_change: Callable[[PreparedJob], None] | None = None,
         store: JobStore | None = None,
     ) -> None:
         self.engine_factory = engine_factory
         self.output_dir_provider = output_dir_provider
         self.browser_provider = browser_provider or (lambda: None)
+        self.language_provider = language_provider or (lambda: "ru")
         self.on_change = on_change or (lambda _job: None)
         self.store = store or JobStore()
 
@@ -39,14 +42,18 @@ class DownloadController:
         height = self._positive_int(payload.get("height"))
         formats: tuple[FormatOption, ...] = ()
         if confirmed:
-            label = f"{height}p · запущенный поток" if height else "Запущенный поток"
+            label = (
+                translate("format.captured_height", self.language_provider(), height=height)
+                if height
+                else translate("format.captured", self.language_provider())
+            )
             formats = (FormatOption(key="captured", label=label, selector="best", height=height),)
         job = PreparedJob(
             job_id=str(payload.get("jobId") or "").strip() or uuid4().hex,
             source_type=source_type,
             url=str(payload["url"]),
             page_url=str(payload.get("pageUrl") or ""),
-            title=str(payload.get("title") or "Медиа"),
+            title=str(payload.get("title") or translate("source.detected", self.language_provider())),
             thumbnail=str(payload.get("thumbnail") or ""),
             duration=self._positive_float(payload.get("duration")),
             headers=dict(payload.get("headers") or {}),
@@ -90,7 +97,11 @@ class DownloadController:
             except Exception as analysis_exc:
                 self.store.fail(job_id, str(analysis_exc))
                 raise
-            self.store.retry_ready(job_id, analysis.formats, "Список форматов обновлён. Выберите формат снова.")
+            self.store.retry_ready(
+                job_id,
+                analysis.formats,
+                translate("message.formats_refreshed", self.language_provider()),
+            )
             raise
         except Exception as exc:
             self.store.fail(job_id, str(exc))
@@ -111,12 +122,13 @@ class DownloadController:
             output_dir=self.output_dir_provider(),
             browser=job.browser or self.browser_provider(),
             headers=job.headers,
+            language=self.language_provider(),
         )
 
     def _download_request(self, job: PreparedJob) -> DownloadRequest:
         option = job.selected_format
         if option is None:
-            raise ValueError("Формат не выбран")
+            raise ValueError(translate("error.format_not_selected", self.language_provider()))
         return DownloadRequest(
             url=job.url,
             output_dir=self.output_dir_provider(),
@@ -127,6 +139,7 @@ class DownloadController:
             expected_duration=job.duration,
             format_selector_override=option.selector,
             audio_output=option.audio_output,
+            language=self.language_provider(),
         )
 
     @staticmethod

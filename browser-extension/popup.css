@@ -10,6 +10,7 @@ body { width: 440px; margin: 0; padding: 16px; }
 header, .row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .header-actions { display: flex; gap: 6px; }
 .header-actions button { padding: 8px; font-size: 12px; }
+.language { border: 1px solid #334155; border-radius: 7px; padding: 7px 5px; background: #0b1220; color: #cbd5e1; font-weight: 700; }
 h1 { font-size: 20px; margin: 0 0 4px; }
 p, footer { color: #94a3b8; font-size: 12px; margin: 0; }
 #connection.ok { color: #86efac; }

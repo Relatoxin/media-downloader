@@ -15,7 +15,7 @@ npm test
 ./build.ps1
 ```
 
-The Python suite covers state transitions, format selection, local HTTP validation, preview/header filtering, settings, Explorer integration, cancellation cleanup, and a local synthetic HLS fixture. The JavaScript suite covers routing, stream grouping, visible badge counts, diagnostics, and popup privacy behavior.
+The Python suite covers state transitions, format selection, Russian/English catalog parity, local HTTP validation, preview/header filtering, settings, Explorer integration, cancellation cleanup, and a local synthetic HLS fixture. The JavaScript suite covers localization catalogs, routing, stream grouping, visible badge counts, diagnostics, and popup privacy behavior.
 
 CI uses Windows, Python 3.12, and Node.js 24. It does not contact live media or social platforms. Live checks are documented separately in [social-platform-matrix.md](social-platform-matrix.md) and must use content/accounts the tester is authorized to access.
 

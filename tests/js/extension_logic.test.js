@@ -4,7 +4,14 @@ const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
 const PlatformRoutes = require("../../browser-extension/platforms.js");
+const ExtensionI18n = require("../../browser-extension/i18n.js");
 const {chooseActiveCandidate, buildPreparePayload, buildDiagnostics, selectDisplayItems, visibleCount} = require("../../browser-extension/media-utils.js");
+
+test("extension exposes matching Russian and English translation catalogs", () => {
+  assert.deepEqual(Object.keys(ExtensionI18n.messages.ru).sort(), Object.keys(ExtensionI18n.messages.en).sort());
+  assert.equal(ExtensionI18n.normalizeLanguage("en-US"), "en");
+  assert.equal(ExtensionI18n.t("durationUnknown", "en"), "Duration unknown");
+});
 
 test("exact currentSrc wins and confirms active quality", () => {
   const items = [
@@ -187,6 +194,123 @@ test("badge count follows the number of displayed social cards", () => {
   assert.equal(visibleCount(tab, raw, PlatformRoutes.modeForUrl(tab.url)), 1);
 });
 
+test("closing a tab during a badge update does not leave an unhandled rejection", async () => {
+  const listeners = {};
+  const event = (name) => ({addListener(listener) { listeners[name] = listener; }});
+  const context = {
+    console,
+    crypto: {randomUUID: () => "id"},
+    Date,
+    Map,
+    Set,
+    Promise,
+    URL,
+    importScripts() {},
+    MediaUtils: require("../../browser-extension/media-utils.js"),
+    PlatformRoutes,
+    chrome: {
+      action: {
+        async setBadgeText() { throw new Error("No tab with id: 123"); },
+        async setBadgeBackgroundColor() { throw new Error("No tab with id: 123"); }
+      },
+      runtime: {onMessage: event("message")},
+      storage: {session: {async get() { return {}; }, async set() {}, async remove() {}}},
+      tabs: {
+        async get() { throw new Error("No tab with id: 123"); },
+        onActivated: event("activated"),
+        onUpdated: event("updated"),
+        onRemoved: event("removed")
+      },
+      webRequest: {
+        onBeforeSendHeaders: event("before"),
+        onHeadersReceived: event("headers"),
+        onCompleted: event("completed"),
+        onErrorOccurred: event("error")
+      }
+    }
+  };
+  vm.runInNewContext(
+    fs.readFileSync(path.join(__dirname, "..", "..", "browser-extension", "background.js"), "utf8"),
+    context
+  );
+
+  let rejection = null;
+  const onUnhandled = (error) => { rejection = error; };
+  process.on("unhandledRejection", onUnhandled);
+  try {
+    listeners.activated({tabId: 123});
+    await new Promise((resolve) => setTimeout(resolve, 25));
+  } finally {
+    process.off("unhandledRejection", onUnhandled);
+  }
+
+  assert.equal(rejection, null);
+});
+
+test("a failed queued capture does not leave an internal unhandled rejection", async () => {
+  const listeners = {};
+  const event = (name) => ({addListener(listener) { listeners[name] = listener; }});
+  const context = {
+    console,
+    crypto: {randomUUID: () => "id"},
+    Date,
+    Map,
+    Set,
+    Promise,
+    URL,
+    importScripts() {},
+    MediaUtils: require("../../browser-extension/media-utils.js"),
+    PlatformRoutes,
+    chrome: {
+      action: {async setBadgeText() {}, async setBadgeBackgroundColor() {}},
+      runtime: {onMessage: event("message")},
+      scripting: {async executeScript() { return []; }},
+      storage: {
+        session: {
+          async get() { throw new Error("No tab with id: 123"); },
+          async set() {},
+          async remove() {}
+        }
+      },
+      tabs: {
+        async get() { throw new Error("No tab with id: 123"); },
+        onActivated: event("activated"),
+        onUpdated: event("updated"),
+        onRemoved: event("removed")
+      },
+      webRequest: {
+        onBeforeSendHeaders: event("before"),
+        onHeadersReceived: event("headers"),
+        onCompleted: event("completed"),
+        onErrorOccurred: event("error")
+      }
+    }
+  };
+  vm.runInNewContext(
+    fs.readFileSync(path.join(__dirname, "..", "..", "browser-extension", "background.js"), "utf8"),
+    context
+  );
+
+  let rejection = null;
+  const onUnhandled = (error) => { rejection = error; };
+  process.on("unhandledRejection", onUnhandled);
+  try {
+    listeners.before({
+      requestId: "request-1",
+      tabId: 123,
+      method: "GET",
+      type: "xmlhttprequest",
+      url: "https://cdn.test/master.m3u8",
+      requestHeaders: []
+    });
+    await new Promise((resolve) => setTimeout(resolve, 25));
+  } finally {
+    process.off("unhandledRejection", onUnhandled);
+  }
+
+  assert.equal(rejection, null);
+});
+
 test("completed TikTok navigation sets badge to its one visible page card", async () => {
   const listeners = {};
   const badges = [];
@@ -358,5 +482,18 @@ test("popup has no technical URL element or full-tab image fallback", () => {
   assert.match(html, /id=["']diagnostics["']/);
   assert.match(js, /buildDiagnostics/);
   assert.match(js, /navigator\.clipboard\.writeText/);
+  assert.match(js, /const previewWrap = node\.querySelector\("\.preview-wrap"\)/);
+  assert.match(js, /if \(previewWrap\) previewWrap\.style\.display = "none"/);
+  assert.doesNotMatch(
+    js,
+    /preview\.addEventListener\("error",[\s\S]*?node\.querySelector\("\.preview-wrap"\)/
+  );
   assert.ok(manifest.permissions.includes("clipboardWrite"));
+  assert.equal(manifest.default_locale, "en");
+  assert.match(manifest.name, /^__MSG_/);
+  for (const locale of ["en", "ru"]) {
+    const messages = JSON.parse(fs.readFileSync(path.join(extensionDir, "_locales", locale, "messages.json"), "utf8"));
+    assert.ok(messages.extensionName.message);
+    assert.ok(messages.extensionDescription.message);
+  }
 });

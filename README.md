@@ -1,4 +1,4 @@
-# Media Downloader 0.5
+# Media Downloader 0.6
 
 English · [Русский](README.ru.md)
 
@@ -17,6 +17,7 @@ A local Windows companion and Chrome MV3 extension for preparing and downloading
 - Runs downloads in a separate process and removes newly created `.part`, `.part-Frag*`, and `.ytdl` files after cancellation.
 - Opens Windows Explorer with the completed file selected.
 - Remembers the chosen output directory between launches.
+- Provides persistent Russian and English interface selection in both the desktop app and Chrome extension.
 
 ## Requirements
 
@@ -30,14 +31,14 @@ FFmpeg is supplied by `imageio-ffmpeg`.
 1. Run `MediaDownloader.exe` from the project root. Keep the adjacent `_internal` folder in place. Python is not required.
 2. Open `chrome://extensions` and enable Developer mode.
 3. Choose **Load unpacked** and select `browser-extension`.
-4. Start a video, open the extension, and choose **Добавить в приложение**.
-5. Select a format in the desktop app and click **Начать загрузку**.
+4. Start a video, open the extension, and choose **Add to application**.
+5. Select a format in the desktop app and click **Start download**.
 
 For YouTube, TikTok, VK, Instagram, Facebook, X, Reddit, and Vimeo, the extension sends the current page URL to the app. On embedded-player sites it lists independent detected streams. Actual platform support depends on the installed `yt-dlp` version, content availability, and authentication.
 
 ## Privacy and local communication
 
-The companion listens only on `127.0.0.1:17843`. It persists only the selected output directory; job history, URLs, cookies, request headers, and previews are not written to settings. See the [security model](docs/security.md).
+The companion listens only on `127.0.0.1:17843`. It persists only the selected output directory and interface language; job history, URLs, cookies, request headers, and previews are not written to settings. See the [security model](docs/security.md).
 
 ## Development
 

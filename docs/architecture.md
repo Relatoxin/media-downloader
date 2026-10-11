@@ -19,11 +19,13 @@ flowchart LR
 - `browser-extension/background.js` records candidate requests and maintains badge state.
 - `browser-extension/media-utils.js` identifies the active candidate, groups related HLS playlists, and builds privacy-reduced diagnostics.
 - `browser-extension/popup.js` captures player metadata/preview and sends a prepared task.
+- `browser-extension/i18n.js` applies the persisted Russian or English popup language; `_locales` localizes Chrome-owned extension metadata.
 - `media_downloader/server.py` exposes a small loopback API and sanitizes untrusted payloads.
 - `media_downloader/controller.py` owns the prepare/start/cancel lifecycle.
 - `media_downloader/job_store.py` keeps newest-first in-memory tasks and enforces a single active download.
 - `media_downloader/engine.py` configures `yt-dlp`, performs downloads in an isolated process, invokes bundled FFmpeg, validates outputs, and cleans partial files.
 - `app.py` renders the Tkinter UI and marshals background events onto the UI thread.
+- `media_downloader/i18n.py` owns matching Russian and English UI/error catalogs shared by the desktop layers.
 
 ## Task lifecycle
 
@@ -34,7 +36,7 @@ ANALYZING -> READY -> DOWNLOADING -> COMPLETED
                           +-> CANCELLED
 ```
 
-Captured active variants can enter `READY` with one confirmed format. Page URLs are analyzed before the user chooses video quality or audio-only output. Jobs are intentionally not persisted; only the output directory is stored.
+Captured active variants can enter `READY` with one confirmed format. Page URLs are analyzed before the user chooses video quality or audio-only output. Jobs are intentionally not persisted; only the output directory and desktop interface language are stored.
 
 ## Trust boundaries
 

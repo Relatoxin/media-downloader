@@ -20,6 +20,7 @@ from media_downloader.controller import DownloadController
 from media_downloader.engine import DownloadCancelled, DownloadEngine, validate_url
 from media_downloader.errors import friendly_error
 from media_downloader.explorer import ExplorerStatus, open_folder, show_in_explorer
+from media_downloader.i18n import system_language, translate
 from media_downloader.jobs import JobState, PreparedJob
 from media_downloader.previews import extract_video_frame
 from media_downloader.server import PORT, CompanionServer
@@ -27,7 +28,8 @@ from media_downloader.settings import AppSettings, SettingsStore
 from media_downloader.thumbnails import safe_thumbnail_headers
 
 APP_BG, CARD_BG, TEXT, MUTED, ACCENT = "#0f172a", "#172033", "#e5e7eb", "#94a3b8", "#38bdf8"
-APP_VERSION = "0.5.3"
+APP_VERSION = "0.6.0"
+LANGUAGE_NAMES = {"ru": "Русский", "en": "English"}
 
 
 def resource_path(relative_path: str) -> Path:
@@ -83,15 +85,19 @@ class MediaDownloaderApp(tk.Tk):
         self.url_var = tk.StringVar()
         self.settings_store = SettingsStore()
         default_output = Path.home() / "Downloads" / "Media Downloader"
-        self.output_var = tk.StringVar(value=str(self.settings_store.load(default_output).output_dir))
-        self.browser_var = tk.StringVar(value="Не использовать")
-        self.status_var = tk.StringVar(value="Готово")
-        self.helper_status_var = tk.StringVar(value="Расширение: запуск локальной связи…")
+        settings = self.settings_store.load(default_output, default_language=system_language())
+        self.language = settings.language
+        self.language_var = tk.StringVar(value=LANGUAGE_NAMES[self.language])
+        self.output_var = tk.StringVar(value=str(settings.output_dir))
+        self.browser_var = tk.StringVar(value=self._t("browser.none"))
+        self.status_var = tk.StringVar(value=self._t("status.ready"))
+        self.helper_status_var = tk.StringVar(value=self._t("companion.starting"))
         self.progress_var = tk.DoubleVar(value=0)
         self.controller = DownloadController(
             engine_factory=self._engine,
             output_dir_provider=self._output_dir,
             browser_provider=self._browser,
+            language_provider=lambda: self.language,
             on_change=lambda job: self.events.put(("job_change", job.job_id)),
         )
         self._build_style()
@@ -99,6 +105,9 @@ class MediaDownloaderApp(tk.Tk):
         self.protocol("WM_DELETE_WINDOW", self._on_close)
         self._start_companion()
         self.after(100, self._drain_events)
+
+    def _t(self, key: str, **values: Any) -> str:
+        return translate(key, self.language, **values)
 
     def _build_style(self) -> None:
         style = ttk.Style(self)
@@ -121,33 +130,44 @@ class MediaDownloaderApp(tk.Tk):
     def _build_ui(self) -> None:
         root = ttk.Frame(self, padding=22)
         root.pack(fill="both", expand=True)
-        ttk.Label(root, text="Media Downloader", style="Title.TLabel").pack(anchor="w")
-        ttk.Label(
-            root, text="Добавьте поток из Chrome или ссылку на YouTube, TikTok и другие сайты.", style="Muted.TLabel"
-        ).pack(anchor="w", pady=(3, 14))
+        title_row = ttk.Frame(root)
+        title_row.pack(fill="x")
+        ttk.Label(title_row, text="Media Downloader", style="Title.TLabel").pack(side="left")
+        language = ttk.Combobox(
+            title_row,
+            textvariable=self.language_var,
+            values=list(LANGUAGE_NAMES.values()),
+            state="readonly",
+            width=10,
+        )
+        language.pack(side="right")
+        language.bind("<<ComboboxSelected>>", self._change_language)
+        ttk.Label(root, text=self._t("app.tagline"), style="Muted.TLabel").pack(anchor="w", pady=(3, 14))
         card = ttk.Frame(root, style="Card.TFrame", padding=16)
         card.pack(fill="x")
         card.columnconfigure(0, weight=1)
-        ttk.Label(card, text="Ссылка на страницу", style="Card.TLabel").grid(row=0, column=0, sticky="w")
+        ttk.Label(card, text=self._t("label.page_url"), style="Card.TLabel").grid(row=0, column=0, sticky="w")
         self.url_entry = ttk.Entry(card, textvariable=self.url_var)
         self.url_entry.grid(row=1, column=0, columnspan=4, sticky="ew", pady=(5, 10))
-        ttk.Label(card, text="Папка сохранения", style="Card.TLabel").grid(row=2, column=0, sticky="w")
+        ttk.Label(card, text=self._t("label.output_dir"), style="Card.TLabel").grid(row=2, column=0, sticky="w")
         ttk.Entry(card, textvariable=self.output_var).grid(row=3, column=0, sticky="ew", pady=(5, 0))
-        ttk.Button(card, text="Обзор…", command=self._choose_output).grid(row=3, column=1, padx=(8, 0), pady=(5, 0))
+        ttk.Button(card, text=self._t("button.browse"), command=self._choose_output).grid(
+            row=3, column=1, padx=(8, 0), pady=(5, 0)
+        )
         ttk.Combobox(
             card,
             textvariable=self.browser_var,
-            values=["Не использовать", "Chrome", "Edge", "Firefox", "Brave", "Opera", "Vivaldi"],
+            values=[self._t("browser.none"), "Chrome", "Edge", "Firefox", "Brave", "Opera", "Vivaldi"],
             state="readonly",
             width=18,
         ).grid(row=3, column=2, padx=(8, 0), pady=(5, 0))
         self.add_url_button = ttk.Button(
-            card, text="Добавить ссылку", style="Accent.TButton", command=self._prepare_url
+            card, text=self._t("button.add_url"), style="Accent.TButton", command=self._prepare_url
         )
         self.add_url_button.grid(row=3, column=3, padx=(8, 0), pady=(5, 0))
         header = ttk.Frame(root)
         header.pack(fill="x", pady=(14, 6))
-        ttk.Label(header, text="Подготовленные задачи", font=("Segoe UI Semibold", 13)).pack(side="left")
+        ttk.Label(header, text=self._t("header.tasks"), font=("Segoe UI Semibold", 13)).pack(side="left")
         ttk.Label(header, textvariable=self.helper_status_var, style="Muted.TLabel").pack(side="right")
         host = ttk.Frame(root)
         host.pack(fill="both", expand=True)
@@ -184,18 +204,43 @@ class MediaDownloaderApp(tk.Tk):
         self.url_entry.focus_set()
 
     def _choose_output(self) -> None:
-        selected = filedialog.askdirectory(initialdir=self.output_var.get(), title="Выберите папку")
+        selected = filedialog.askdirectory(initialdir=self.output_var.get(), title=self._t("dialog.choose_folder"))
         if selected:
             self.output_var.set(selected)
             self._persist_output_dir()
 
     def _persist_output_dir(self) -> None:
+        language = getattr(self, "language", "ru")
         try:
             output_dir = self._output_dir().expanduser().resolve()
             output_dir.mkdir(parents=True, exist_ok=True)
-            self.settings_store.save(AppSettings(output_dir=output_dir))
+            self.settings_store.save(AppSettings(output_dir=output_dir, language=language))
         except (OSError, ValueError) as exc:
-            self._append_log(f"Предупреждение: не удалось сохранить папку загрузки: {exc}")
+            self._append_log(translate("warning.save_output", language, error=exc))
+
+    def _change_language(self, _event: tk.Event | None = None) -> None:
+        selected = self.language_var.get()
+        language = next((code for code, name in LANGUAGE_NAMES.items() if name == selected), self.language)
+        if language == self.language:
+            return
+        current_browser = self.browser_var.get()
+        browser_was_disabled = current_browser in {translate("browser.none", "ru"), translate("browser.none", "en")}
+        self.language = language
+        if browser_was_disabled:
+            self.browser_var.set(self._t("browser.none"))
+        self.status_var.set(self._t("status.ready"))
+        self.helper_status_var.set(
+            self._t("companion.connected", version=APP_VERSION, port=PORT)
+            if self.companion is not None
+            else self._t("companion.unavailable")
+        )
+        self._persist_output_dir()
+        self.unbind_all("<MouseWheel>")
+        for child in self.winfo_children():
+            child.destroy()
+        self.format_vars.clear()
+        self._build_style()
+        self._build_ui()
 
     def _on_mouse_wheel(self, event: tk.Event) -> str | None:
         widget: Any = event.widget
@@ -212,18 +257,20 @@ class MediaDownloaderApp(tk.Tk):
     def _output_dir(self) -> Path:
         value = self.output_var.get().strip()
         if not value:
-            raise ValueError("Выберите папку сохранения")
+            raise ValueError(translate("error.output_required", getattr(self, "language", "ru")))
         return Path(value)
 
     def _browser(self) -> str | None:
         label = self.browser_var.get()
-        return None if label == "Не использовать" else label.lower()
+        disabled_labels = {translate("browser.none", "ru"), translate("browser.none", "en")}
+        return None if label in disabled_labels else label.lower()
 
     def _engine(self) -> DownloadEngine:
         return DownloadEngine(
             lambda data: self.events.put(("progress", data)),
             lambda text: self.events.put(("log", text)),
             self.cancel_event,
+            language=self.language,
         )
 
     def _start_companion(self) -> None:
@@ -233,25 +280,31 @@ class MediaDownloaderApp(tk.Tk):
                 start_callback=lambda payload: self.events.put(("start_payload", payload)),
             )
             self.companion.start()
-            self.helper_status_var.set(f"Расширение подключено · {APP_VERSION} · порт {PORT}")
-            self._append_log(f"Media Downloader {APP_VERSION}\nЛокальная связь: http://127.0.0.1:{PORT}")
+            self.helper_status_var.set(self._t("companion.connected", version=APP_VERSION, port=PORT))
+            self._append_log(self._t("companion.log_ready", version=APP_VERSION, port=PORT))
         except OSError as exc:
-            self.helper_status_var.set("Расширение: порт недоступен")
-            self._append_log(f"Не удалось запустить связь с расширением: {exc}")
+            self.helper_status_var.set(self._t("companion.unavailable"))
+            self._append_log(self._t("companion.log_failed", error=exc))
 
     def _prepare_url(self) -> None:
         try:
-            url = validate_url(self.url_var.get())
+            url = validate_url(self.url_var.get(), self.language)
         except ValueError as exc:
-            messagebox.showerror("Некорректная ссылка", str(exc), parent=self)
+            messagebox.showerror(self._t("dialog.invalid_url"), str(exc), parent=self)
             return
         self._launch_prepare(
-            {"sourceType": "page_url", "url": url, "pageUrl": url, "title": "Анализ ссылки", "browser": self._browser()}
+            {
+                "sourceType": "page_url",
+                "url": url,
+                "pageUrl": url,
+                "title": self._t("job.analysis_title"),
+                "browser": self._browser(),
+            }
         )
 
     def _launch_prepare(self, payload: dict[str, Any]) -> None:
         self.add_url_button.configure(state="disabled")
-        self.status_var.set("Анализирую доступные форматы…")
+        self.status_var.set(self._t("status.analyzing"))
         threading.Thread(target=self._run_prepare, args=(payload,), daemon=True).start()
 
     def _run_prepare(self, payload: dict[str, Any]) -> None:
@@ -259,16 +312,20 @@ class MediaDownloaderApp(tk.Tk):
             job = self.controller.prepare(payload)
             self.events.put(("prepare_done", job.job_id))
         except Exception as exc:
-            self.events.put(("prepare_error", friendly_error(exc)))
+            self.events.put(("prepare_error", friendly_error(exc, language=self.language)))
 
     def _start_job(self, job_id: str) -> None:
         if self.controller.store.active_job_id is not None:
-            messagebox.showinfo("Загрузка уже идёт", "Дождитесь завершения или отмените текущую загрузку.", parent=self)
+            messagebox.showinfo(
+                self._t("dialog.download_active_title"),
+                self._t("dialog.download_active_body"),
+                parent=self,
+            )
             return
         job = self.controller.store.get(job_id)
         key = job.selected_format_key
         if variable := self.format_vars.get(job_id):
-            option = next((item for item in job.formats if item.label == variable.get()), None)
+            option = next((item for item in job.formats if self._format_label(item) == variable.get()), None)
             key = option.key if option else None
         self.cancel_event.clear()
         self.progress_var.set(0)
@@ -282,7 +339,7 @@ class MediaDownloaderApp(tk.Tk):
         except DownloadCancelled:
             self.events.put(("download_cancelled", job_id))
         except Exception as exc:
-            self.events.put(("download_error", friendly_error(exc)))
+            self.events.put(("download_error", friendly_error(exc, language=self.language)))
 
     def _remove_job(self, job_id: str) -> None:
         try:
@@ -291,29 +348,35 @@ class MediaDownloaderApp(tk.Tk):
             self.thumbnail_images.pop(job_id, None)
             self._render_jobs()
         except RuntimeError as exc:
-            messagebox.showerror("Нельзя удалить задачу", str(exc), parent=self)
+            messagebox.showerror(self._t("dialog.remove_failed"), str(exc), parent=self)
 
     def _open_job_file(self, job_id: str) -> None:
         job = self.controller.store.get(job_id)
         if job.output_path is None:
-            messagebox.showinfo("Файл недоступен", "У задачи нет сохранённого пути к файлу.", parent=self)
+            messagebox.showinfo(
+                self._t("dialog.file_unavailable_title"),
+                self._t("dialog.file_unavailable_body"),
+                parent=self,
+            )
             return
         result = show_in_explorer(job.output_path)
         if result.status == ExplorerStatus.SELECTED:
             return
         if result.status == ExplorerStatus.MISSING:
             if result.folder.is_dir() and messagebox.askyesno(
-                "Файл перемещён",
-                "Скачанный файл не найден по сохранённому пути. Открыть папку загрузки?",
+                self._t("dialog.file_moved_title"),
+                self._t("dialog.file_moved_body"),
                 parent=self,
             ):
                 folder_result = open_folder(result.folder)
                 if folder_result.status == ExplorerStatus.FAILED:
-                    messagebox.showerror("Не удалось открыть папку", folder_result.error, parent=self)
+                    messagebox.showerror(self._t("dialog.open_folder_failed"), folder_result.error, parent=self)
             else:
-                messagebox.showinfo("Файл не найден", "Файл был перемещён или удалён.", parent=self)
+                messagebox.showinfo(
+                    self._t("dialog.file_missing_title"), self._t("dialog.file_missing_body"), parent=self
+                )
             return
-        messagebox.showerror("Не удалось открыть Проводник", result.error, parent=self)
+        messagebox.showerror(self._t("dialog.explorer_failed"), result.error, parent=self)
 
     def _render_jobs(self) -> None:
         for child in self.tasks_frame.winfo_children():
@@ -322,7 +385,7 @@ class MediaDownloaderApp(tk.Tk):
         if not jobs:
             ttk.Label(
                 self.tasks_frame,
-                text="Задач пока нет. Добавьте поток из расширения или вставьте ссылку выше.",
+                text=self._t("empty.jobs"),
                 style="Muted.TLabel",
             ).pack(anchor="w", pady=18)
             return
@@ -333,58 +396,82 @@ class MediaDownloaderApp(tk.Tk):
         card = ttk.Frame(self.tasks_frame, style="Card.TFrame", padding=12)
         card.pack(fill="x", pady=(0, 8))
         card.columnconfigure(1, weight=1)
-        preview = ttk.Label(card, text="Превью\nнедоступно", style="CardMuted.TLabel", anchor="center", width=22)
+        preview = ttk.Label(
+            card, text=self._t("preview.unavailable"), style="CardMuted.TLabel", anchor="center", width=22
+        )
         preview.grid(row=0, column=0, rowspan=4, sticky="nsew", padx=(0, 12))
         if job.job_id in self.thumbnail_images:
             preview.configure(image=self.thumbnail_images[job.job_id], text="")
         elif job.state != JobState.ANALYZING:
-            preview.configure(text="Загрузка\nпревью…")
+            preview.configure(text=self._t("preview.loading"))
             self._request_thumbnail(job)
         ttk.Label(card, text=job.title, style="Card.TLabel", font=("Segoe UI Semibold", 11)).grid(
             row=0, column=1, sticky="w"
         )
-        source = job.platform or ("Обнаруженный поток" if job.active_quality_confirmed else "Анализ ссылки")
+        source = job.platform or (
+            self._t("source.detected") if job.active_quality_confirmed else self._t("source.analysis")
+        )
         ttk.Label(
             card,
             text=f"{source} · {self._duration(job.duration)} · {self._state_label(job.state)}",
             style="CardMuted.TLabel",
         ).grid(row=1, column=1, sticky="w", pady=(3, 6))
         if len(job.formats) > 1:
-            labels = [item.label for item in job.formats]
-            selected = job.selected_format.label if job.selected_format else labels[0]
+            labels = [self._format_label(item) for item in job.formats]
+            selected = self._format_label(job.selected_format) if job.selected_format else labels[0]
             variable = self.format_vars.setdefault(job.job_id, tk.StringVar(value=selected))
             ttk.Combobox(card, textvariable=variable, values=labels, state="readonly").grid(
                 row=2, column=1, sticky="ew"
             )
         elif job.formats:
-            ttk.Label(card, text=job.formats[0].label, style="Card.TLabel").grid(row=2, column=1, sticky="w")
+            ttk.Label(card, text=self._format_label(job.formats[0]), style="Card.TLabel").grid(
+                row=2, column=1, sticky="w"
+            )
         actions = ttk.Frame(card, style="Card.TFrame")
         actions.grid(row=3, column=1, sticky="w", pady=(8, 0))
         can_start = job.state == JobState.READY and self.controller.store.active_job_id is None
         ttk.Button(
             actions,
-            text="Начать загрузку",
+            text=self._t("button.start"),
             style="Accent.TButton",
             command=partial(self._start_job, job.job_id),
             state="normal" if can_start else "disabled",
         ).pack(side="left")
         if job.state == JobState.DOWNLOADING:
-            ttk.Button(actions, text="Отменить", command=self._cancel).pack(side="left", padx=(7, 0))
+            ttk.Button(actions, text=self._t("button.cancel"), command=self._cancel).pack(side="left", padx=(7, 0))
         elif job.state == JobState.COMPLETED and job.output_path is not None:
-            ttk.Button(actions, text="Открыть в проводнике", command=partial(self._open_job_file, job.job_id)).pack(
-                side="left", padx=(7, 0)
-            )
-            ttk.Button(actions, text="Удалить", command=partial(self._remove_job, job.job_id)).pack(
+            ttk.Button(
+                actions,
+                text=self._t("button.open_explorer"),
+                command=partial(self._open_job_file, job.job_id),
+            ).pack(side="left", padx=(7, 0))
+            ttk.Button(actions, text=self._t("button.remove"), command=partial(self._remove_job, job.job_id)).pack(
                 side="left", padx=(7, 0)
             )
         elif can_remove_job(job.state):
-            ttk.Button(actions, text="Удалить", command=partial(self._remove_job, job.job_id)).pack(
+            ttk.Button(actions, text=self._t("button.remove"), command=partial(self._remove_job, job.job_id)).pack(
                 side="left", padx=(7, 0)
             )
         if job.message:
             ttk.Label(card, text=job.message, style="CardMuted.TLabel", wraplength=580).grid(
                 row=4, column=1, sticky="w", pady=(6, 0)
             )
+
+    def _format_label(self, option: Any) -> str:
+        if option.key == "best":
+            return self._t("format.best")
+        if option.key == "audio-mp3":
+            return self._t("format.audio_mp3")
+        if option.key == "audio-source":
+            return self._t("format.audio_source")
+        if option.key == "captured":
+            if option.height:
+                return self._t("format.captured_height", height=option.height)
+            return self._t("format.captured")
+        if option.key.startswith("video-") and option.height:
+            fps = f" · {int(option.fps)} FPS" if option.fps and option.fps > 30 else ""
+            return self._t("format.video", height=option.height, fps=fps)
+        return option.label
 
     def _request_thumbnail(self, job: PreparedJob) -> None:
         if job.job_id in self.thumbnail_loading:
@@ -412,9 +499,9 @@ class MediaDownloaderApp(tk.Tk):
             if raw is None:
                 raw = extract_video_frame(source_url, headers)
             if raw is None:
-                raise ValueError("Превью недоступно")
+                raise ValueError(self._t("error.preview_unavailable"))
             if len(raw) > 2 * 1024 * 1024:
-                raise ValueError("Превью слишком большое")
+                raise ValueError(self._t("error.preview_too_large"))
             image = Image.open(BytesIO(raw)).convert("RGB")
             image.thumbnail((176, 99), Image.Resampling.LANCZOS)
             self.events.put(("thumbnail", (job_id, image)))
@@ -423,27 +510,18 @@ class MediaDownloaderApp(tk.Tk):
 
     def _cancel(self) -> None:
         self.cancel_event.set()
-        self.status_var.set("Отмена после завершения текущего фрагмента…")
+        self.status_var.set(self._t("status.cancelling"))
 
-    @staticmethod
-    def _duration(seconds: float | None) -> str:
+    def _duration(self, seconds: float | None) -> str:
         if not seconds:
-            return "длительность неизвестна"
+            return self._t("duration.unknown")
         total = round(seconds)
         hours, remainder = divmod(total, 3600)
         minutes, secs = divmod(remainder, 60)
         return f"{hours}:{minutes:02d}:{secs:02d}" if hours else f"{minutes}:{secs:02d}"
 
-    @staticmethod
-    def _state_label(state: JobState) -> str:
-        return {
-            JobState.ANALYZING: "анализ",
-            JobState.READY: "готово к загрузке",
-            JobState.DOWNLOADING: "загружается",
-            JobState.COMPLETED: "завершено",
-            JobState.FAILED: "ошибка",
-            JobState.CANCELLED: "отменено",
-        }[state]
+    def _state_label(self, state: JobState) -> str:
+        return self._t(f"state.{state.value}")
 
     def _append_log(self, text: str) -> None:
         if text.strip():
@@ -460,16 +538,18 @@ class MediaDownloaderApp(tk.Tk):
                 percent = min(downloaded / total * 100, 100)
                 self.progress.configure(mode="determinate")
                 self.progress_var.set(percent)
-                self.status_var.set(f"Загрузка: {percent:.1f}% — {data.get('_speed_str', '').strip()}")
+                self.status_var.set(
+                    self._t("status.download", percent=percent, speed=data.get("_speed_str", "").strip())
+                )
             else:
                 self.progress.configure(mode="indeterminate")
                 self.progress.start(12)
-                self.status_var.set("Загрузка…")
+                self.status_var.set(self._t("status.downloading"))
         elif data.get("status") == "finished":
             self.progress.stop()
             self.progress.configure(mode="determinate")
             self.progress_var.set(100)
-            self.status_var.set("Обработка файла…")
+            self.status_var.set(self._t("status.processing"))
 
     def _drain_events(self) -> None:
         try:
@@ -488,28 +568,28 @@ class MediaDownloaderApp(tk.Tk):
                     self._render_jobs()
                 elif kind == "prepare_done":
                     self.add_url_button.configure(state="normal")
-                    self.status_var.set("Задача подготовлена. Нажмите «Начать загрузку».")
+                    self.status_var.set(self._t("status.prepared"))
                     self._render_jobs()
                 elif kind == "prepare_error":
                     self.add_url_button.configure(state="normal")
-                    self.status_var.set("Ошибка анализа")
-                    self._append_log(f"Ошибка: {payload}")
-                    messagebox.showerror("Не удалось подготовить задачу", str(payload), parent=self)
+                    self.status_var.set(self._t("status.analysis_error"))
+                    self._append_log(self._t("log.error", error=payload))
+                    messagebox.showerror(self._t("dialog.prepare_failed"), str(payload), parent=self)
                 elif kind == "download_done":
                     self.progress.stop()
                     self.progress_var.set(100)
-                    self.status_var.set(f"Готово. Файл сохранён в {self.output_var.get()}")
+                    self.status_var.set(self._t("status.done", directory=self.output_var.get()))
                     self._render_jobs()
                 elif kind == "download_cancelled":
                     self.progress.stop()
-                    self.status_var.set("Загрузка отменена")
+                    self.status_var.set(self._t("status.cancelled"))
                     self._render_jobs()
                 elif kind == "download_error":
                     self.progress.stop()
-                    self.status_var.set("Ошибка загрузки")
-                    self._append_log(f"Ошибка: {payload}")
+                    self.status_var.set(self._t("status.download_error"))
+                    self._append_log(self._t("log.error", error=payload))
                     self._render_jobs()
-                    messagebox.showerror("Не удалось скачать медиа", str(payload), parent=self)
+                    messagebox.showerror(self._t("dialog.download_failed"), str(payload), parent=self)
                 elif kind == "thumbnail":
                     job_id, image = payload
                     self.thumbnail_loading.discard(job_id)

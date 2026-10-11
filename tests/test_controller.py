@@ -72,6 +72,24 @@ class DownloadControllerTest(unittest.TestCase):
         self.assertEqual(self.engine.analyzed, [])
         self.assertEqual(self.engine.downloaded, [])
 
+    def test_confirmed_capture_uses_selected_language(self) -> None:
+        controller = DownloadController(
+            engine_factory=lambda: self.engine,
+            output_dir_provider=lambda: self.output_dir,
+            language_provider=lambda: "en",
+        )
+
+        job = controller.prepare(
+            {
+                "sourceType": "captured_stream",
+                "url": "https://cdn.example/720/index.m3u8",
+                "height": 720,
+                "activeQualityConfirmed": True,
+            }
+        )
+
+        self.assertEqual(job.formats[0].label, "720p · currently playing stream")
+
     def test_page_url_is_analyzed_but_not_downloaded(self) -> None:
         job = self.controller.prepare(
             {"jobId": "page-1", "sourceType": "page_url", "url": "https://youtube.com/watch?v=test", "title": "Page"}

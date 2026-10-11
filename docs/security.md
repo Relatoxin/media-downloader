@@ -6,7 +6,7 @@ The extension observes request metadata needed to identify media. When the user 
 
 ## Stored data
 
-The settings file contains only `outputDir`. Jobs, URLs, previews, cookies, authorization headers, and browser profiles remain in memory and are discarded when the app exits. Downloaded files remain in the user-selected directory.
+The settings file contains only `outputDir` and the desktop interface `language`. The extension stores its language choice in `chrome.storage.local`. Jobs, URLs, previews, cookies, authorization headers, and browser profiles remain in memory and are discarded when the app exits. Downloaded files remain in the user-selected directory.
 
 ## Protections
 

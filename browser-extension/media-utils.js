@@ -67,11 +67,11 @@
     };
   }
 
-  function buildPagePayload(tab) {
+  function buildPagePayload(tab, fallbackTitle = "Media") {
     return {
       url: tab.url,
       pageUrl: tab.url,
-      title: tab.title || "Страница из Chrome",
+      title: tab.title || fallbackTitle,
       sourceType: "page_url",
       activeQualityConfirmed: false,
       kind: "PAGE",
@@ -127,8 +127,8 @@
     return result;
   }
 
-  function selectDisplayItems(tab, items, mode, players = []) {
-    return mode === "page_url" ? [buildPagePayload(tab)] : collapseRelatedCandidates(items, players);
+  function selectDisplayItems(tab, items, mode, players = [], fallbackTitle = "Media") {
+    return mode === "page_url" ? [buildPagePayload(tab, fallbackTitle)] : collapseRelatedCandidates(items, players);
   }
 
   function visibleCount(tab, items, mode, players = []) {

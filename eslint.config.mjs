@@ -17,7 +17,8 @@ export default [
         chrome: "readonly",
         importScripts: "readonly",
         MediaUtils: "readonly",
-        PlatformRoutes: "readonly"
+        PlatformRoutes: "readonly",
+        ExtensionI18n: "readonly"
       }
     },
     rules: {

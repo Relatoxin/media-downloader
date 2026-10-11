@@ -27,7 +27,7 @@ The extension groups related HLS candidates and shows the number of downloadable
 
 ## Result
 
-The prototype now has a clear extension-to-app workflow, explicit quality/audio selection, newest-first tasks, persistent output settings, reliable cancellation cleanup, and Explorer selection for completed files. The repository adds pinned dependencies, lint/type checks, automated regression tests, CI, security documentation, and a reproducible contributor setup.
+The prototype now has a clear extension-to-app workflow, Russian and English interfaces, explicit quality/audio selection, newest-first tasks, persistent output settings, reliable cancellation cleanup, and Explorer selection for completed files. The repository adds pinned dependencies, lint/type checks, automated regression tests, CI, security documentation, and a reproducible contributor setup.
 
 ## Next steps
 

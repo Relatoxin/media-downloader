@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ru">
+<html lang="en">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -9,34 +9,37 @@
   <body>
     <header>
       <div>
-        <h1>Медиапотоки</h1>
-        <p id="connection">Проверка локального приложения…</p>
+        <h1 data-i18n="title">Media streams</h1>
+        <p id="connection" data-i18n="connectionChecking">Checking the local application…</p>
       </div>
       <div class="header-actions">
-        <button id="diagnostics" class="secondary" type="button" title="Скопировать безопасный диагностический отчёт">Диагностика</button>
-        <button id="clear" class="secondary" type="button">Очистить</button>
+        <select id="language" class="language" data-i18n-title="languageTitle" title="Interface language">
+          <option value="ru">RU</option>
+          <option value="en">EN</option>
+        </select>
+        <button id="diagnostics" class="secondary" type="button" data-i18n="diagnostics" data-i18n-title="diagnosticsTitle" title="Copy a safe diagnostic report">Diagnostics</button>
+        <button id="clear" class="secondary" type="button" data-i18n="clear">Clear</button>
       </div>
     </header>
     <div id="message" role="status"></div>
-    <button id="add-page" class="secondary page-action" type="button">Добавить текущую страницу</button>
+    <button id="add-page" class="secondary page-action" type="button" data-i18n="addPage">Add current page</button>
     <main id="results"></main>
     <template id="candidate">
       <article>
         <div class="preview-wrap">
-          <img class="preview" alt="Кадр из воспроизводимого видео">
-          <span class="duration">Длительность неизвестна</span>
+          <img class="preview" data-i18n-alt="previewAlt" alt="Frame from the playing video">
+          <span class="duration" data-i18n="durationUnknown">Duration unknown</span>
         </div>
         <div class="row">
           <span class="kind"></span>
-          <button class="remove icon" type="button" title="Убрать из списка">×</button>
+          <button class="remove icon" type="button" data-i18n-title="removeTitle" title="Remove from list">×</button>
         </div>
         <div class="media-info"></div>
-        <button class="download" type="button">Добавить в приложение</button>
+        <button class="download" type="button" data-i18n="addToApp">Add to application</button>
       </article>
     </template>
-    <footer>
-      Добавление не начинает загрузку. Запуск выполняется отдельно в локальном приложении. DRM не поддерживается.
-    </footer>
+    <footer data-i18n="footer">Adding an item does not start downloading. Start it separately in the local application. DRM is not supported.</footer>
+    <script src="i18n.js"></script>
     <script src="platforms.js"></script>
     <script src="media-utils.js"></script>
     <script src="popup.js"></script>

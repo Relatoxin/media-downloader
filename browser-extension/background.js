@@ -9,6 +9,10 @@ const MASTER_RE = /(?:^|[-_./])master(?:[-_.]|$)/i;
 const queues = new Map();
 const pendingHeaders = new Map();
 
+function runSafely(promise) {
+  void promise.catch(() => {});
+}
+
 function storageKey(tabId) {
   return `media-tab-${tabId}`;
 }
@@ -17,7 +21,7 @@ function withTabLock(tabId, operation) {
   const previous = queues.get(tabId) || Promise.resolve();
   const current = previous.then(operation, operation);
   let tracked;
-  tracked = current.finally(() => {
+  tracked = current.then(() => undefined, () => undefined).finally(() => {
     if (queues.get(tabId) === tracked) queues.delete(tabId);
   });
   queues.set(tabId, tracked);
@@ -80,17 +84,17 @@ async function getPlayersForBadge(tabId) {
 }
 
 async function updateBadge(tabId, items, knownTab = null) {
-  let count = items.length;
   try {
+    let count = items.length;
     const tab = knownTab || await chrome.tabs.get(tabId);
     const mode = PlatformRoutes.modeForUrl(tab.url || "");
     const players = mode === "detected_streams" ? await getPlayersForBadge(tabId) : [];
     count = MediaUtils.visibleCount(tab, items, mode, players);
+    await chrome.action.setBadgeText({tabId, text: count ? String(count) : ""});
+    await chrome.action.setBadgeBackgroundColor({tabId, color: "#0284c7"});
   } catch (_) {
-    // The tab may have closed between capture and badge update.
+    // The tab may have closed at any point during the badge update.
   }
-  await chrome.action.setBadgeText({tabId, text: count ? String(count) : ""});
-  await chrome.action.setBadgeBackgroundColor({tabId, color: "#0284c7"});
 }
 
 async function saveItems(tabId, items) {
@@ -164,7 +168,7 @@ async function capture(details, capturedHeaders = null) {
       id: crypto.randomUUID(),
       url: details.url,
       kind,
-      title: tab.title || "Медиа из Chrome",
+      title: tab.title || "Media",
       pageUrl: tab.url || details.documentUrl || details.initiator || "",
       initiator: details.initiator || "",
       headers: capturedHeaders || requestHeaders(details),
@@ -179,7 +183,7 @@ chrome.webRequest.onBeforeSendHeaders.addListener(
   (details) => {
     const headers = requestHeaders(details);
     pendingHeaders.set(details.requestId, headers);
-    void capture(details, headers);
+    runSafely(capture(details, headers));
   },
   {urls: ["<all_urls>"]},
   ["requestHeaders", "extraHeaders"]
@@ -187,7 +191,7 @@ chrome.webRequest.onBeforeSendHeaders.addListener(
 
 chrome.webRequest.onHeadersReceived.addListener(
   (details) => {
-    if (mediaKind(details)) void capture(details, pendingHeaders.get(details.requestId) || {});
+    if (mediaKind(details)) runSafely(capture(details, pendingHeaders.get(details.requestId) || {}));
   },
   {urls: ["<all_urls>"]},
   ["responseHeaders", "extraHeaders"]
@@ -202,37 +206,43 @@ chrome.webRequest.onErrorOccurred.addListener(forgetRequest, {urls: ["<all_urls>
 
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (changeInfo.status === "loading") {
-    void chrome.storage.session.remove(storageKey(tabId));
-    void chrome.action.setBadgeText({tabId, text: ""});
+    runSafely(chrome.storage.session.remove(storageKey(tabId)));
+    runSafely(chrome.action.setBadgeText({tabId, text: ""}));
   } else if (changeInfo.status === "complete") {
-    void getItems(tabId).then((items) => updateBadge(tabId, items, tab));
+    runSafely(getItems(tabId).then((items) => updateBadge(tabId, items, tab)));
   }
 });
 
 chrome.tabs.onActivated.addListener(({tabId}) => {
-  void getItems(tabId).then((items) => updateBadge(tabId, items));
+  runSafely(getItems(tabId).then((items) => updateBadge(tabId, items)));
 });
 
 chrome.tabs.onRemoved.addListener((tabId) => {
   queues.delete(tabId);
-  void chrome.storage.session.remove(storageKey(tabId));
+  runSafely(chrome.storage.session.remove(storageKey(tabId)));
 });
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (!Number.isInteger(message.tabId)) return false;
   if (message.action === "get") {
-    getItems(message.tabId).then((items) => sendResponse({items}));
+    getItems(message.tabId)
+      .then((items) => sendResponse({items}))
+      .catch((error) => sendResponse({error: error.message}));
     return true;
   }
   if (message.action === "clear") {
-    saveItems(message.tabId, []).then(() => sendResponse({ok: true}));
+    saveItems(message.tabId, [])
+      .then(() => sendResponse({ok: true}))
+      .catch((error) => sendResponse({error: error.message}));
     return true;
   }
   if (message.action === "remove" && typeof message.id === "string") {
-    getItems(message.tabId).then((items) => {
-      const filtered = items.filter((item) => item.id !== message.id);
-      return saveItems(message.tabId, filtered).then(() => sendResponse({ok: true}));
-    });
+    getItems(message.tabId)
+      .then((items) => {
+        const filtered = items.filter((item) => item.id !== message.id);
+        return saveItems(message.tabId, filtered).then(() => sendResponse({ok: true}));
+      })
+      .catch((error) => sendResponse({error: error.message}));
     return true;
   }
   return false;

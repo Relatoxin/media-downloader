@@ -1,23 +1,25 @@
 from __future__ import annotations
 
+from .i18n import translate
 
-def friendly_error(exc: Exception) -> str:
+
+def friendly_error(exc: Exception, *, language: str = "ru") -> str:
     text = str(exc)
     lowered = text.lower()
     if "drm" in lowered:
-        return "Поток защищён DRM. Приложение не обходит DRM-защиту."
+        return translate("error.drm", language)
     if "403" in lowered or "forbidden" in lowered:
-        return "Ссылка или подпись CDN устарела. Снова запустите видео в Chrome и добавьте поток заново.\n\n" + text
+        return translate("error.expired", language, details=text)
     if "cookies" in lowered or "sign in" in lowered or "login" in lowered:
-        return "Сайт требует вход. Выберите браузер, где выполнен вход, и повторите анализ.\n\n" + text
+        return translate("error.login", language, details=text)
     if "unavailable" in lowered or "not available" in lowered or "country" in lowered or "region" in lowered:
-        return "Видео недоступно или ограничено для текущего региона/аккаунта.\n\n" + text
+        return translate("error.unavailable", language, details=text)
     if "requested format" in lowered or "формат больше недоступен" in lowered:
-        return "Список форматов обновлён. Выберите качество снова."
+        return translate("error.formats_refreshed", language)
     if "ffmpeg" in lowered:
-        return "FFmpeg недоступен или не смог обработать медиа.\n\n" + text
+        return translate("error.ffmpeg", language, details=text)
     if "неполный" in lowered or "поврежд" in lowered or "служебный или пустой" in lowered:
-        return "Итоговый файл повреждён или скачан не полностью.\n\n" + text
+        return translate("error.corrupt", language, details=text)
     if "unsupported url" in lowered:
-        return "Эта страница пока не поддерживается yt-dlp.\n\n" + text
+        return translate("error.unsupported", language, details=text)
     return text

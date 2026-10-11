@@ -3,16 +3,29 @@ const results = document.querySelector("#results");
 const message = document.querySelector("#message");
 const connection = document.querySelector("#connection");
 const template = document.querySelector("#candidate");
+const languageSelect = document.querySelector("#language");
 let activeTabId = null;
 let activeTab = null;
 let serviceReady = false;
 let tabScreenshot = "";
 let players = [];
 let topFrame = null;
+let language = "en";
+
+function tr(key, values = {}) {
+  return ExtensionI18n.t(key, language, values);
+}
+
+async function initializeLanguage() {
+  const stored = await chrome.storage.local.get("language");
+  language = ExtensionI18n.normalizeLanguage(stored.language || chrome.i18n.getUILanguage());
+  languageSelect.value = language;
+  ExtensionI18n.applyDocument(document, language);
+}
 
 function formatDuration(seconds, isLive = false) {
   if (isLive) return "LIVE";
-  if (!Number.isFinite(seconds) || seconds <= 0) return "Длительность неизвестна";
+  if (!Number.isFinite(seconds) || seconds <= 0) return tr("durationUnknown");
   const rounded = Math.round(seconds);
   const hours = Math.floor(rounded / 3600);
   const minutes = Math.floor((rounded % 3600) / 60);
@@ -129,18 +142,18 @@ async function checkService() {
     serviceReady = false;
   }
   connection.textContent = serviceReady
-    ? "Локальное приложение подключено"
-    : "Сначала запустите MediaDownloader.exe";
+    ? tr("connectionReady")
+    : tr("connectionMissing");
   connection.className = serviceReady ? "ok" : "bad";
 }
 
 async function prepare(payload, button) {
   if (!serviceReady) {
-    message.textContent = "Локальное приложение не запущено. Запустите MediaDownloader.exe и откройте расширение снова.";
+    message.textContent = tr("appNotRunning");
     return;
   }
   button.disabled = true;
-  button.textContent = "Передача…";
+  button.textContent = tr("transferring");
   try {
     const response = await fetch(`${SERVICE}/api/prepare`, {
       method: "POST",
@@ -149,12 +162,12 @@ async function prepare(payload, button) {
     });
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
-    message.textContent = "Задача добавлена. Запустите её кнопкой в локальном приложении.";
-    button.textContent = "Добавлено";
+    message.textContent = tr("taskAdded");
+    button.textContent = tr("added");
   } catch (error) {
-    message.textContent = `Не удалось передать поток: ${error.message}`;
+    message.textContent = tr("transferFailed", {error: error.message});
     button.disabled = false;
-    button.textContent = "Добавить в приложение";
+    button.textContent = tr("addToApp");
   }
 }
 
@@ -168,32 +181,37 @@ function render(items) {
   if (!items.length) {
     const empty = document.createElement("div");
     empty.className = "empty";
-    empty.textContent = "Потоки не обнаружены. Запустите воспроизведение нужной серии, подождите несколько секунд и откройте это окно снова.";
+    empty.textContent = tr("noStreams");
     results.append(empty);
     return;
   }
   for (const item of items) {
     const node = template.content.cloneNode(true);
+    ExtensionI18n.applyDocument(node, language);
     const player = playerFor(item);
     const pageSource = item.sourceType === "page_url";
     if (player?.live || Number.isFinite(player?.duration)) item.duration = player.live ? null : player.duration;
     const preview = node.querySelector(".preview");
+    const previewWrap = node.querySelector(".preview-wrap");
+    const hidePreview = () => {
+      if (previewWrap) previewWrap.style.display = "none";
+    };
     const poster = player?.poster || "";
     preview.src = poster || player?.preview || "";
     preview.addEventListener("error", () => {
       preview.removeAttribute("src");
-      node.querySelector(".preview-wrap").style.display = "none";
+      hidePreview();
     });
-    if (!preview.src) node.querySelector(".preview-wrap").style.display = "none";
+    if (!preview.src) hidePreview();
     node.querySelector(".duration").textContent = formatDuration(player?.duration, player?.live);
     const isMaster = item.kind === "HLS" && /(?:^|[-_./])master(?:[-_.]|$)/i.test(item.url);
     node.querySelector(".kind").textContent = pageSource
-      ? "СТРАНИЦА С ВИДЕО"
-      : (isMaster ? "HLS · MASTER · РЕКОМЕНДУЕТСЯ" : item.kind);
-    const dimensions = player?.width && player?.height ? `${player.width}×${player.height}` : "Разрешение неизвестно";
+      ? tr("videoPage")
+      : (isMaster ? tr("masterRecommended") : item.kind);
+    const dimensions = player?.width && player?.height ? `${player.width}×${player.height}` : tr("resolutionUnknown");
     node.querySelector(".media-info").textContent = pageSource
-      ? (item.title || "Текущая страница")
-      : (player?.active ? `${dimensions} · сейчас воспроизводится` : dimensions);
+      ? (item.title || tr("currentPage"))
+      : (player?.active ? tr("currentlyPlaying", {dimensions}) : dimensions);
     const button = node.querySelector(".download");
     const activeMatch = pageSource ? null : MediaUtils.chooseActiveCandidate(items, players);
     const confirmed = !pageSource && activeMatch.item?.id === item.id && activeMatch.confirmed;
@@ -221,27 +239,27 @@ async function refresh() {
   const response = await chrome.runtime.sendMessage({action: "get", tabId: activeTabId});
   const mode = PlatformRoutes.modeForUrl(tab.url);
   document.querySelector("#add-page").hidden = mode === "page_url";
-  render(MediaUtils.selectDisplayItems(tab, response?.items || [], mode, players));
+  render(MediaUtils.selectDisplayItems(tab, response?.items || [], mode, players, tr("currentPage")));
 }
 
 document.querySelector("#add-page").addEventListener("click", async (event) => {
   if (!activeTab?.url?.startsWith("http")) {
-    message.textContent = "Текущую страницу нельзя передать приложению.";
+    message.textContent = tr("cannotAddPage");
     return;
   }
-  await prepare(MediaUtils.buildPagePayload(activeTab), event.currentTarget);
+  await prepare(MediaUtils.buildPagePayload(activeTab, tr("currentPage")), event.currentTarget);
 });
 
 document.querySelector("#clear").addEventListener("click", async () => {
   if (!Number.isInteger(activeTabId)) return;
   await chrome.runtime.sendMessage({action: "clear", tabId: activeTabId});
-  message.textContent = "Список очищен.";
+  message.textContent = tr("listCleared");
   render([]);
 });
 
 document.querySelector("#diagnostics").addEventListener("click", async () => {
   if (!activeTab || !Number.isInteger(activeTabId)) {
-    message.textContent = "Нет активной вкладки для диагностики.";
+    message.textContent = tr("noActiveTab");
     return;
   }
   try {
@@ -256,10 +274,23 @@ document.querySelector("#diagnostics").addEventListener("click", async () => {
       chrome.runtime.getManifest().version
     );
     await navigator.clipboard.writeText(JSON.stringify(report, null, 2));
-    message.textContent = "Диагностика скопирована. Пришлите JSON в чат.";
+    message.textContent = tr("diagnosticsCopied");
   } catch (error) {
-    message.textContent = `Не удалось скопировать диагностику: ${error.message}`;
+    message.textContent = tr("diagnosticsFailed", {error: error.message});
   }
 });
 
-void Promise.all([checkService(), refresh()]);
+languageSelect.addEventListener("change", async () => {
+  language = ExtensionI18n.normalizeLanguage(languageSelect.value);
+  await chrome.storage.local.set({language});
+  ExtensionI18n.applyDocument(document, language);
+  message.textContent = "";
+  await Promise.all([checkService(), refresh()]);
+});
+
+async function initialize() {
+  await initializeLanguage();
+  await Promise.all([checkService(), refresh()]);
+}
+
+void initialize();

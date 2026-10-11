@@ -1,0 +1,11 @@
+{
+  "extensionName": {
+    "message": "Media Downloader Companion"
+  },
+  "extensionDescription": {
+    "message": "Sends supported pages and detected HLS/DASH streams to the local Media Downloader."
+  },
+  "extensionActionTitle": {
+    "message": "Detected media streams"
+  }
+}

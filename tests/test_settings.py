@@ -22,13 +22,20 @@ class SettingsStoreTest(unittest.TestCase):
     def test_missing_config_uses_default(self) -> None:
         self.assertEqual(self.store.load(self.default).output_dir, self.default)
 
-    def test_round_trip_writes_only_output_directory_and_replaces_atomically(self) -> None:
-        self.store.save(AppSettings(output_dir=self.output))
+    def test_round_trip_writes_output_directory_and_language_atomically(self) -> None:
+        self.store.save(AppSettings(output_dir=self.output, language="en"))
         payload = json.loads(self.config.read_text(encoding="utf-8"))
 
-        self.assertEqual(payload, {"outputDir": str(self.output.resolve())})
-        self.assertEqual(self.store.load(self.default).output_dir, self.output.resolve())
+        self.assertEqual(payload, {"outputDir": str(self.output.resolve()), "language": "en"})
+        loaded = self.store.load(self.default)
+        self.assertEqual(loaded.output_dir, self.output.resolve())
+        self.assertEqual(loaded.language, "en")
         self.assertFalse((self.root / "settings.json.tmp").exists())
+
+    def test_legacy_config_without_language_stays_russian(self) -> None:
+        self.config.write_text(json.dumps({"outputDir": str(self.output.resolve())}), encoding="utf-8")
+
+        self.assertEqual(self.store.load(self.default, default_language="en").language, "ru")
 
     def test_malformed_wrong_type_and_nonexistent_directory_fall_back(self) -> None:
         cases = [

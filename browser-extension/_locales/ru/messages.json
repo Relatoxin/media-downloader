@@ -1,0 +1,11 @@
+{
+  "extensionName": {
+    "message": "Media Downloader Companion"
+  },
+  "extensionDescription": {
+    "message": "Передаёт поддерживаемые страницы и обнаруженные HLS/DASH-потоки локальному Media Downloader."
+  },
+  "extensionActionTitle": {
+    "message": "Обнаруженные медиапотоки"
+  }
+}

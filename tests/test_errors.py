@@ -20,6 +20,9 @@ class FriendlyErrorTest(unittest.TestCase):
             with self.subTest(raw=raw):
                 self.assertIn(expected, friendly_error(RuntimeError(raw)))
 
+    def test_maps_common_failure_to_english_guidance(self) -> None:
+        self.assertIn("CDN URL or signature has expired", friendly_error(RuntimeError("HTTP 403"), language="en"))
+
 
 if __name__ == "__main__":
     unittest.main()

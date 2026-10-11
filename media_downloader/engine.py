@@ -18,6 +18,7 @@ import yt_dlp
 from yt_dlp.networking.impersonate import ImpersonateTarget
 
 from .formats import MediaAnalysis, build_format_options
+from .i18n import translate
 
 ProgressCallback = Callable[[dict[str, Any]], None]
 LogCallback = Callable[[str], None]
@@ -45,6 +46,7 @@ class DownloadRequest:
     expected_duration: float | None = None
     format_selector_override: str | None = None
     audio_output: Literal["mp3", "source"] | None = None
+    language: str = "ru"
 
 
 QUALITY_LABELS = {
@@ -56,15 +58,15 @@ QUALITY_LABELS = {
 }
 
 
-def validate_url(value: str) -> str:
+def validate_url(value: str, language: str = "ru") -> str:
     url = value.strip()
     parsed = urlparse(url)
     if parsed.scheme not in {"http", "https"} or not parsed.netloc:
-        raise ValueError("Введите полную ссылку, начинающуюся с http:// или https://")
+        raise ValueError(translate("error.url", language))
     return url
 
 
-def format_selector(quality: str) -> str:
+def format_selector(quality: str, language: str = "ru") -> str:
     if quality == "audio":
         return "bestaudio/best"
     if quality == "best":
@@ -75,12 +77,13 @@ def format_selector(quality: str) -> str:
             f"b[height<={quality}][ext=mp4]/"
             f"bv*[height<={quality}]+ba/b[height<={quality}]"
         )
-    raise ValueError(f"Неизвестный режим качества: {quality}")
+    raise ValueError(translate("error.quality", language, quality=quality))
 
 
 class _Logger:
-    def __init__(self, callback: LogCallback) -> None:
+    def __init__(self, callback: LogCallback, language: str = "ru") -> None:
         self.callback = callback
+        self.language = language
 
     def debug(self, message: str) -> None:
         if not message.startswith("[debug]"):
@@ -90,10 +93,10 @@ class _Logger:
         self.callback(message)
 
     def warning(self, message: str) -> None:
-        self.callback(f"Предупреждение: {message}")
+        self.callback(translate("log.warning", self.language, message=message))
 
     def error(self, message: str) -> None:
-        self.callback(f"Ошибка: {message}")
+        self.callback(translate("log.error", self.language, error=message))
 
 
 class DownloadEngine:
@@ -105,18 +108,20 @@ class DownloadEngine:
         *,
         isolate_download: bool = True,
         worker_target: Callable[[DownloadRequest, Any], None] | None = None,
+        language: str = "ru",
     ) -> None:
         self.progress_callback = progress_callback
         self.log_callback = log_callback
         self.cancel_event = cancel_event or Event()
         self.isolate_download = isolate_download
         self.worker_target = worker_target or _download_worker
+        self.language = language
         self.completed_files: list[Path] = []
         self.final_files: list[Path] = []
 
     def _progress_hook(self, status: dict[str, Any]) -> None:
         if self.cancel_event.is_set():
-            raise DownloadCancelled("Загрузка отменена пользователем")
+            raise DownloadCancelled(translate("error.cancelled", self.language))
         if status.get("status") == "finished" and status.get("filename"):
             self.completed_files.append(Path(status["filename"]))
         self.progress_callback(status)
@@ -145,7 +150,7 @@ class DownloadEngine:
                 output_template = f"{safe_hint}{tag_part} [%(id).32B].%(ext)s"
 
         options: dict[str, Any] = {
-            "format": request.format_selector_override or format_selector(request.quality),
+            "format": request.format_selector_override or format_selector(request.quality, request.language),
             "outtmpl": str(output_dir / output_template),
             "windowsfilenames": True,
             "noplaylist": not request.playlist,
@@ -159,7 +164,7 @@ class DownloadEngine:
             "skip_unavailable_fragments": False,
             "progress_hooks": [self._progress_hook],
             "postprocessor_hooks": [self._postprocessor_hook],
-            "logger": _Logger(self.log_callback),
+            "logger": _Logger(self.log_callback, request.language),
             "ffmpeg_location": imageio_ffmpeg.get_ffmpeg_exe(),
             "merge_output_format": "mp4",
             "js_runtimes": {"node": {}, "deno": {}},
@@ -255,7 +260,7 @@ class DownloadEngine:
             )
             if siblings:
                 return siblings[0].resolve()
-        raise RuntimeError("yt-dlp завершил загрузку, но итоговый файл не найден")
+        raise RuntimeError(translate("error.no_output", self.language))
 
     @staticmethod
     def _partial_file_state(output_dir: Path) -> dict[Path, tuple[int, int]]:
@@ -297,44 +302,45 @@ class DownloadEngine:
                     if attempt < 4:
                         time.sleep(0.1)
             if last_error is not None:
-                self.log_callback(f"Предупреждение: не удалось удалить временный файл {path.name}: {last_error}")
+                self.log_callback(translate("warning.partial_cleanup", self.language, name=path.name, error=last_error))
         if removed:
-            self.log_callback(f"Удалены временные файлы отменённой загрузки: {removed}")
+            self.log_callback(translate("log.partial_cleanup", self.language, count=removed))
 
     def _validate_completed_media(self, request: DownloadRequest, final_file: Path) -> None:
         if request.audio_output or final_file.suffix.lower() not in {".mp4", ".mkv", ".webm", ".mov"}:
             return
         if final_file.stat().st_size < 4 * 1024:
-            raise RuntimeError(
-                "Поток вернул только служебный или пустой MP4-файл. Выберите HLS/DASH-кандидат вместо init/blank MP4."
-            )
+            raise RuntimeError(translate("error.tiny_video", request.language))
         if request.expected_duration and request.expected_duration > 30:
             actual_duration = self.media_duration(final_file)
             if actual_duration is None:
-                raise RuntimeError("Не удалось проверить целостность готового видеофайла.")
+                raise RuntimeError(translate("error.integrity_check", request.language))
             if actual_duration < request.expected_duration * 0.9:
                 raise RuntimeError(
-                    "Скачанный файл неполный: фактически доступно "
-                    f"{actual_duration / 60:.1f} мин из ожидаемых {request.expected_duration / 60:.1f} мин. "
-                    "Файл оставлен на диске для диагностики."
+                    translate(
+                        "error.incomplete_video",
+                        request.language,
+                        actual=actual_duration / 60,
+                        expected=request.expected_duration / 60,
+                    )
                 )
 
     def inspect(self, request: DownloadRequest) -> dict[str, Any]:
-        url = validate_url(request.url)
+        url = validate_url(request.url, request.language)
         with yt_dlp.YoutubeDL(self._options(request, simulate=True)) as downloader:
             info = downloader.extract_info(url, download=False)
         if not info:
-            raise RuntimeError("Не удалось получить сведения о медиа")
+            raise RuntimeError(translate("error.no_media_info", request.language))
         return info
 
     def analyze(self, request: DownloadRequest) -> MediaAnalysis:
         info = self.inspect(request)
         return MediaAnalysis(
-            title=str(info.get("title") or "Без названия"),
+            title=str(info.get("title") or translate("media.untitled", request.language)),
             thumbnail=str(info.get("thumbnail") or ""),
             duration=float(info["duration"]) if info.get("duration") else None,
             platform=str(info.get("extractor_key") or info.get("extractor") or "Generic"),
-            formats=build_format_options(info),
+            formats=build_format_options(info, language=request.language),
         )
 
     @staticmethod
@@ -372,7 +378,7 @@ class DownloadEngine:
                 if self.cancel_event.is_set():
                     self._stop_process(process)
                     self._cleanup_changed_partial_files(request.output_dir, partial_files_before)
-                    raise DownloadCancelled("Загрузка отменена пользователем")
+                    raise DownloadCancelled(translate("error.cancelled", request.language))
                 try:
                     handle_message(messages.get(timeout=0.1))
                 except Empty:
@@ -385,7 +391,7 @@ class DownloadEngine:
                     break
             if self.cancel_event.is_set():
                 self._cleanup_changed_partial_files(request.output_dir, partial_files_before)
-                raise DownloadCancelled("Загрузка отменена пользователем")
+                raise DownloadCancelled(translate("error.cancelled", request.language))
             if error:
                 error_type, message = error
                 if error_type == "format":
@@ -394,7 +400,7 @@ class DownloadEngine:
                     raise yt_dlp.utils.DownloadError(message)
                 raise RuntimeError(message)
             if result is None:
-                raise RuntimeError(f"Процесс загрузки завершился без результата (код {process.exitcode})")
+                raise RuntimeError(translate("error.worker_result", request.language, code=process.exitcode))
             return result
         finally:
             self._stop_process(process)
@@ -408,7 +414,7 @@ class DownloadEngine:
         return self._download_direct(request)
 
     def _download_direct(self, request: DownloadRequest) -> Path:
-        url = validate_url(request.url)
+        url = validate_url(request.url, request.language)
         self.completed_files.clear()
         self.final_files.clear()
         options = self._options(request)
@@ -422,16 +428,16 @@ class DownloadEngine:
         except yt_dlp.utils.DownloadError as exc:
             if self.cancel_event.is_set():
                 self._cleanup_changed_partial_files(request.output_dir, partial_files_before)
-                raise DownloadCancelled("Загрузка отменена пользователем") from exc
+                raise DownloadCancelled(translate("error.cancelled", request.language)) from exc
             lowered = str(exc).lower()
             if "requested format" in lowered and ("not available" in lowered or "unavailable" in lowered):
-                raise FormatUnavailableError("Выбранный формат больше недоступен") from exc
+                raise FormatUnavailableError(translate("error.format_unavailable", request.language)) from exc
             raise
         if self.cancel_event.is_set():
             self._cleanup_changed_partial_files(request.output_dir, partial_files_before)
-            raise DownloadCancelled("Загрузка отменена пользователем")
+            raise DownloadCancelled(translate("error.cancelled", request.language))
         if not info:
-            raise RuntimeError("yt-dlp не вернул сведения об итоговом файле")
+            raise RuntimeError(translate("error.no_final_info", request.language))
         final_file = self._resolve_completed_file(info, request.output_dir)
         self._validate_completed_media(request, final_file)
         return final_file
@@ -456,6 +462,7 @@ def _download_worker(request: DownloadRequest, messages: Any) -> None:
         lambda status: messages.put(("progress", _serializable_progress(status))),
         lambda message: messages.put(("log", message)),
         isolate_download=False,
+        language=request.language,
     )
     try:
         result = engine.download(request)

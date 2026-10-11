@@ -12,7 +12,7 @@ from app import (
     set_window_icon,
     wheel_units,
 )
-from media_downloader.jobs import JobState
+from media_downloader.jobs import FormatOption, JobState
 
 
 class AppHelpersTest(unittest.TestCase):
@@ -96,6 +96,24 @@ class AppHelpersTest(unittest.TestCase):
         MediaDownloaderApp._persist_output_dir(AppLike())
         self.assertEqual(len(logs), 1)
         self.assertIn("не удалось сохранить папку", logs[0])
+
+    def test_format_labels_follow_current_interface_language(self) -> None:
+        class AppLike:
+            language = "en"
+            _t = MediaDownloaderApp._t
+
+        option = FormatOption(
+            key="video-1080p60",
+            label="1080p · видео со звуком",
+            selector="video+audio",
+            height=1080,
+            fps=60,
+        )
+
+        self.assertEqual(
+            MediaDownloaderApp._format_label(AppLike(), option),
+            "1080p · 60 FPS · video with audio",
+        )
 
 
 if __name__ == "__main__":

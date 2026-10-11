@@ -110,6 +110,19 @@ class FormatOptionsTest(unittest.TestCase):
         )
         self.assertEqual(len([item for item in options if item.key == "video-1080p60"]), 1)
 
+    def test_english_format_labels_are_available(self) -> None:
+        info = {
+            "formats": [
+                {"format_id": "video", "height": 720, "fps": 30, "vcodec": "avc1", "acodec": "mp4a", "ext": "mp4"},
+                {"format_id": "audio", "vcodec": "none", "acodec": "mp4a", "ext": "m4a"},
+            ]
+        }
+
+        options = build_format_options(info, language="en")
+
+        self.assertIn("video with audio", options[0].label)
+        self.assertIn("Audio only", next(item for item in options if item.key == "audio-mp3").label)
+
 
 if __name__ == "__main__":
     unittest.main()

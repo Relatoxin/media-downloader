@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+from .i18n import translate
 from .jobs import FormatOption
 
 
@@ -32,7 +33,7 @@ def _preference(item: dict[str, Any]) -> tuple[int, int, int]:
     )
 
 
-def build_format_options(info: dict[str, Any]) -> tuple[FormatOption, ...]:
+def build_format_options(info: dict[str, Any], *, language: str = "ru") -> tuple[FormatOption, ...]:
     formats = [item for item in info.get("formats") or () if isinstance(item, dict)]
     audio_formats = [
         item for item in formats if item.get("acodec") not in {None, "none"} and item.get("vcodec") in {None, "none"}
@@ -54,7 +55,7 @@ def build_format_options(info: dict[str, Any]) -> tuple[FormatOption, ...]:
     options: list[FormatOption] = [
         FormatOption(
             key="best",
-            label="Лучшее качество · видео со звуком",
+            label=translate("format.best", language),
             selector="bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4]/bv*+ba/b",
         )
     ]
@@ -68,7 +69,8 @@ def build_format_options(info: dict[str, Any]) -> tuple[FormatOption, ...]:
         if not has_audio and size and best_audio:
             audio_size = _number(best_audio.get("filesize") or best_audio.get("filesize_approx"))
             size = size + audio_size if audio_size else size
-        label = f"{height}p" + (f" · {fps} FPS" if fps > 30 else "") + " · видео со звуком"
+        fps_label = f" · {fps} FPS" if fps > 30 else ""
+        label = translate("format.video", language, height=height, fps=fps_label)
         options.append(
             FormatOption(
                 key=f"video-{height}p{fps}",
@@ -86,7 +88,7 @@ def build_format_options(info: dict[str, Any]) -> tuple[FormatOption, ...]:
         options.append(
             FormatOption(
                 key="audio-mp3",
-                label="Только аудио · MP3 192 кбит/с",
+                label=translate("format.audio_mp3", language),
                 selector="bestaudio/best",
                 media_type="audio",
                 extension="mp3",
@@ -97,7 +99,7 @@ def build_format_options(info: dict[str, Any]) -> tuple[FormatOption, ...]:
         options.append(
             FormatOption(
                 key="audio-source",
-                label="Только аудио · исходный формат",
+                label=translate("format.audio_source", language),
                 selector="bestaudio/best",
                 media_type="audio",
                 extension=str(best_audio.get("ext") or "") if best_audio else None,
